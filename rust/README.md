@@ -102,6 +102,10 @@ cargo build --release
 cargo test
 ```
 
-Requires Rust 1.97 or newer. The only dependencies are `raptorq` (RFC 6330
-fountain coding), `brotli`, and `flate2`; the release profile strips symbols
-and enables LTO for a small static binary.
+Requires Rust 1.97 or newer. Dependencies: `raptorq` (RFC 6330 fountain
+coding), `brotli`, `flate2`, `qrcode`, `png`, `minifb` (windows),
+`zxing-cpp` (bundled C++ scanner), and `nokhwa` (camera). On Linux the
+`nokhwa` v4l2 backend builds bindings with bindgen, which needs libclang;
+point `LIBCLANG_PATH` at a libclang shared library if it is not installed
+system-wide. The release profile strips symbols and enables LTO for a small
+static binary.
