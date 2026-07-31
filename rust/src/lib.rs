@@ -25,6 +25,7 @@ pub mod error;
 pub mod frame;
 pub mod presets;
 pub mod qrencode;
+pub mod receiver;
 pub mod sender;
 pub mod transfer;
 
@@ -40,6 +41,9 @@ pub use frame::{
 };
 pub use presets::{get_preset, nominal_rate, Ecc, TransferPreset, TRANSFER_PRESETS};
 pub use qrencode::{render_frame, QrImage, QUIET_ZONE_MODULES};
+pub use receiver::{
+    Frame, FrameSource, PngDirSource, Receiver, ReceiverOptions, ReceiverStats, RecoveredFile,
+};
 pub use sender::{format_bytes, Sender};
 pub use transfer::{
     classify_raptorq_packets, create_optical_transfer, evenly_interleave, raptor_packet_key,

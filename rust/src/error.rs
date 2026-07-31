@@ -19,6 +19,10 @@ pub enum Error {
     QrEncode(String),
     /// Unknown transfer preset key.
     UnknownPreset(String),
+    /// PNG encode/decode failure.
+    Png(String),
+    /// Camera capture failure.
+    Capture(String),
     /// I/O failure (compression/decompression).
     Io(std::io::Error),
 }
@@ -42,6 +46,8 @@ impl fmt::Display for Error {
             Error::UnknownPreset(key) => {
                 write!(f, "unknown transfer preset: {}", key)
             }
+            Error::Png(message) => write!(f, "PNG error: {}", message),
+            Error::Capture(message) => write!(f, "camera error: {}", message),
             Error::Io(cause) => write!(f, "{}", cause),
         }
     }
@@ -59,6 +65,12 @@ impl std::error::Error for Error {
 impl From<std::io::Error> for Error {
     fn from(cause: std::io::Error) -> Error {
         Error::Io(cause)
+    }
+}
+
+impl From<png::DecodingError> for Error {
+    fn from(cause: png::DecodingError) -> Error {
+        Error::Png(cause.to_string())
     }
 }
 

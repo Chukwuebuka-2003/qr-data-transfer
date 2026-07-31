@@ -27,19 +27,29 @@ vehicle; this library is the engine that will drive it.
   the browser encoder, plus the standard 4-module quiet zone
 - `sender` — the playable stream engine: source/repair interleaving, per-lane
   pacing, dual-lane alternation
+- `receiver` — the native scanning pipeline: crop, downscale, ZXing-C++ decode,
+  QF4 validation, deduplication, RaptorQ recovery, and four-layer checksum
+  verification. Camera-agnostic (`FrameSource` trait); ships with a PNG
+  sequence source for offline scanning and testing
 - `crc32` — table-driven CRC-32 used at every integrity layer
 
-## CLI
+## CLIs
 
 ```text
 qrferry-send <file> [--preset <key>] [--scale <n>] [--out <dir>] [--frames <n>]
+qrferry-recv [--out <dir>] [--dual] [--source <dir>] [--device <n>]
+             [--width <n>] [--height <n>] [--fps <n>] [--no-window]
+             [--max-frames <n>]
 ```
 
-- Window mode (default): plays the QR stream at the preset rate; Escape or
-  close to quit. Dual presets render both lanes side by side.
-- `--out <dir>`: exports a PNG frame sequence (one full cycle by default) for
-  offline playback from a projector, tablet, or TV. The phone scans it with
-  the unchanged browser `/scan` page.
+- `qrferry-send` window mode (default): plays the QR stream at the preset
+  rate; Escape or close to quit. Dual presets render both lanes side by side.
+  `--out <dir>` exports a PNG frame sequence (one full cycle by default) for
+  offline playback from a projector, tablet, or TV.
+- `qrferry-recv` opens the camera (or replays a `--source` PNG sequence),
+  shows a live preview with a scan guide, and saves the verified file to
+  `--out`. It reports delivered/scanner fps, decode p50/p95, accepted
+  symbols, and progress.
 - Presets: `robust`, `balanced`, `turbo`, `turbo30`, `turbo60`, `megabit`.
 
 ## Wire compatibility

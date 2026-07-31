@@ -18,8 +18,11 @@ pub struct Sender {
     pub preset: TransferPreset,
     /// Interleaved play order over `transfer.packets`.
     order: Vec<usize>,
-    /// Per-lane cursors (dual modes advance each lane at fps/lanes).
-    lane_cursor: [usize; 2],
+    /// Global playback cursor: every tick advances by one, so the combined
+    /// stream always carries `fps` symbols per second (dual modes show a new
+    /// packet per tick, alternating which lane it is drawn on, exactly like
+    /// the browser sender).
+    cursor: usize,
     /// Total frames shown (across all lanes).
     pub frames_played: u64,
 }
@@ -52,7 +55,7 @@ impl Sender {
             transfer,
             preset: *preset,
             order,
-            lane_cursor: [0, 0],
+            cursor: 0,
             frames_played: 0,
         })
     }
@@ -62,12 +65,19 @@ impl Sender {
         self.order.len()
     }
 
+    /// Index of the packet the next tick will render (0-based within the
+    /// cycle); useful for UI progress.
+    pub fn current_frame(&self) -> usize {
+        self.cursor % self.order.len()
+    }
+
     /// Render the next frame. In dual-lane modes this alternates lanes at the
-    /// total stream rate, so each lane advances at `fps / lanes`.
+    /// total stream rate, so each lane is updated at `fps / lanes` and stays
+    /// stable for two display refreshes, while the combined stream carries
+    /// `fps` symbols per second.
     pub fn next_frame(&mut self) -> Result<QrImage> {
-        let lane = (self.frames_played % u64::from(self.preset.lanes)) as usize;
-        let index = self.order[self.lane_cursor[lane] % self.order.len()];
-        self.lane_cursor[lane] += 1;
+        let index = self.order[self.cursor % self.order.len()];
+        self.cursor += 1;
         self.frames_played += 1;
         render_frame(
             &self.transfer.packets[index],
@@ -77,10 +87,9 @@ impl Sender {
         )
     }
 
-    /// Render the next frame without advancing playback (preview).
+    /// Render the frame the next tick would show, without advancing playback.
     pub fn peek(&self) -> Result<QrImage> {
-        let lane = (self.frames_played % u64::from(self.preset.lanes)) as usize;
-        let index = self.order[self.lane_cursor[lane] % self.order.len()];
+        let index = self.order[self.cursor % self.order.len()];
         render_frame(
             &self.transfer.packets[index],
             self.preset.version,
@@ -171,20 +180,45 @@ mod tests {
     }
 
     #[test]
-    fn dual_lane_alternates_evenly() {
+    fn dual_lane_shows_new_packet_each_tick() {
         let file: Vec<u8> = (0..10_000).map(|i| (i % 251) as u8).collect();
         let mut sender =
             Sender::prepare(&file, "a.bin", "application/octet-stream", "turbo60").unwrap();
         assert_eq!(sender.preset.lanes, 2);
-        // Play order: lane0:o0, lane1:o0, lane0:o1, lane1:o1 ...
-        // Both lanes start at the same packet, so the first two ticks are
-        // identical; subsequent ticks must diverge per lane.
-        let frames: Vec<crate::qrencode::QrImage> =
-            (0..4).map(|_| sender.next_frame().unwrap()).collect();
-        assert_eq!(frames[0].rgba, frames[1].rgba);
-        assert_ne!(frames[0].rgba, frames[2].rgba); // lane 0 advanced
-        assert_ne!(frames[1].rgba, frames[2].rgba); // lanes differ now
-        assert_eq!(sender.frames_played, 4);
+        // Every tick shows a NEW packet (alternating lanes), so the combined
+        // stream carries fps symbols per second. After one full cycle every
+        // packet has been displayed exactly once.
+        let mut seen = std::collections::HashSet::new();
+        let mut duplicates = 0usize;
+        for _ in 0..sender.cycle_len() {
+            let frame = sender.next_frame().unwrap();
+            // Decode the rendered QR to identify the packet.
+            let pixels = frame.to_rxing_pixels();
+            let source = rxing::RGBLuminanceSource::new_with_width_height_pixels(
+                frame.width,
+                frame.height,
+                &pixels,
+            )
+            .unwrap();
+            let mut bitmap = rxing::BinaryBitmap::new(rxing::common::HybridBinarizer::new(source));
+            let raw = rxing::MultiFormatReader::default()
+                .decode(&mut bitmap)
+                .unwrap()
+                .getRawBytes()
+                .to_vec();
+            let parsed = crate::frame::parse_frame(&raw).unwrap();
+            let key = crate::transfer::raptor_packet_key(&parsed);
+            if !seen.insert(key) {
+                duplicates += 1;
+            }
+        }
+        assert_eq!(duplicates, 0, "a packet was shown more than once per cycle");
+        assert_eq!(
+            seen.len(),
+            sender.cycle_len(),
+            "not all packets shown in a cycle"
+        );
+        assert_eq!(sender.frames_played, sender.cycle_len() as u64);
     }
 
     #[test]
