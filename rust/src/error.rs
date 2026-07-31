@@ -15,6 +15,10 @@ pub enum Error {
     InvalidPacket(&'static str),
     /// The RaptorQ layer rejected the operation.
     RaptorQ(&'static str),
+    /// QR encoding failed.
+    QrEncode(String),
+    /// Unknown transfer preset key.
+    UnknownPreset(String),
     /// I/O failure (compression/decompression).
     Io(std::io::Error),
 }
@@ -34,6 +38,10 @@ impl fmt::Display for Error {
             Error::InvalidContainer(message) => write!(f, "{}", message),
             Error::InvalidPacket(message) => write!(f, "{}", message),
             Error::RaptorQ(message) => write!(f, "{}", message),
+            Error::QrEncode(message) => write!(f, "QR encoding failed: {}", message),
+            Error::UnknownPreset(key) => {
+                write!(f, "unknown transfer preset: {}", key)
+            }
             Error::Io(cause) => write!(f, "{}", cause),
         }
     }

@@ -20,7 +20,27 @@ vehicle; this library is the engine that will drive it.
   stream of self-describing frames, and incrementally decode a stream back
   into the container, tolerating erasures, out-of-order arrival, and
   mid-stream joins
+- `presets` — the six channel profiles (Robust .. 1 Mbps dual) with QR
+  byte-mode capacities verified against the `qrcode` crate at the exact
+  JS-derived boundary
+- `qrencode` — QR rendering with a single byte-mode segment (no ECI), matching
+  the browser encoder, plus the standard 4-module quiet zone
+- `sender` — the playable stream engine: source/repair interleaving, per-lane
+  pacing, dual-lane alternation
 - `crc32` — table-driven CRC-32 used at every integrity layer
+
+## CLI
+
+```text
+qrferry-send <file> [--preset <key>] [--scale <n>] [--out <dir>] [--frames <n>]
+```
+
+- Window mode (default): plays the QR stream at the preset rate; Escape or
+  close to quit. Dual presets render both lanes side by side.
+- `--out <dir>`: exports a PNG frame sequence (one full cycle by default) for
+  offline playback from a projector, tablet, or TV. The phone scans it with
+  the unchanged browser `/scan` page.
+- Presets: `robust`, `balanced`, `turbo`, `turbo30`, `turbo60`, `megabit`.
 
 ## Wire compatibility
 
