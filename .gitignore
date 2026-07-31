@@ -44,3 +44,6 @@ next-env.d.ts
 
 # Local demo recordings and rendered videos
 /videos/
+
+# rust
+/rust/target

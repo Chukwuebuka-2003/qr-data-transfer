@@ -1,0 +1,20 @@
+[package]
+name = "qrferry"
+version = "0.1.0"
+edition = "2021"
+description = "Rust port of the QRFerry QF4 optical transfer codec: RFC 6330 RaptorQ over animated QR frames"
+license = "MIT"
+repository = "https://github.com/Chukwuebuka-2003/qr-data-transfer"
+keywords = ["qr", "raptorq", "fec", "transfer", "airgap"]
+
+[dependencies]
+raptorq = "2.0.1"
+brotli = "8.0.4"
+flate2 = "1.1.9"
+
+[dev-dependencies]
+
+[profile.release]
+lto = true
+codegen-units = 1
+strip = true
